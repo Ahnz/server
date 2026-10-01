@@ -33,6 +33,7 @@ use OCP\FilesMetadata\IMetadataQuery;
 use OCP\FilesMetadata\Model\IMetadataValueWrapper;
 use OCP\IUser;
 use OCP\Share\IManager;
+use OCP\Util;
 use Sabre\DAV\Exception\NotFound;
 use Sabre\DAV\INode;
 use SearchDAV\Backend\ISearchBackend;
@@ -542,23 +543,15 @@ class FileSearchBackend implements ISearchBackend {
 			return max(0, 0 + $value);
 		}
 
-		$date = \DateTime::createFromFormat(\DateTimeInterface::ATOM, (string)$value);
+		$date = \DateTime::createFromFormat(
+			\DateTimeInterface::ATOM,
+			(string)$value,
+		);
 		if (!$date instanceof \DateTime) {
 			return 0;
 		}
 
-		try {
-			return $date->getTimestamp();
-		} catch (\Error $e) {
-			if (!$e instanceof \ValueError && !is_a($e, 'DateRangeError')) {
-				throw $e;
-			}
-
-			// On 32-bit PHP, getTimestamp() fails for dates outside the
-			// representable integer range. Clamp broad search bounds instead of
-			// failing the whole WebDAV SEARCH request.
-			return (int)$date->format('Y') >= 2038 ? PHP_INT_MAX : 0;
-		}
+		return Util::numericToNumber($date->format('U'));
 	}
 
 	/**
